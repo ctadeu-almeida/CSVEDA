@@ -1047,24 +1047,38 @@ def main():
                                 answer_text = answer_text[:10000] + "... [resposta truncada]"
                             st.markdown(answer_text)
 
-                        # Verificar e exibir gráficos gerados
+                        # Verificar e exibir gráficos gerados (com retry para garantir detecção)
                         import os
+                        import time
                         charts_dir = 'charts'
+
+                        # Aguardar um pouco para garantir que gráficos sejam salvos
+                        time.sleep(2)
+
                         if os.path.exists(charts_dir):
                             chart_files = [f for f in os.listdir(charts_dir) if f.endswith('.png')]
-                            if chart_files:
+
+                            # Filtrar apenas gráficos recentes (últimos 30 segundos)
+                            current_time = time.time()
+                            recent_charts = []
+                            for chart_file in chart_files:
+                                chart_path = os.path.join(charts_dir, chart_file)
+                                if os.path.getmtime(chart_path) > current_time - 30:
+                                    recent_charts.append(chart_file)
+
+                            if recent_charts:
                                 st.markdown("**📈 Gráficos Gerados:**")
 
                                 # Ordenar por data de modificação (mais recente primeiro)
-                                chart_files.sort(key=lambda x: os.path.getmtime(os.path.join(charts_dir, x)), reverse=True)
+                                recent_charts.sort(key=lambda x: os.path.getmtime(os.path.join(charts_dir, x)), reverse=True)
 
-                                # Mostrar até 5 gráficos mais recentes
-                                for chart_file in chart_files[:5]:
+                                # Mostrar gráficos recentes
+                                for chart_file in recent_charts:
                                     chart_path = os.path.join(charts_dir, chart_file)
                                     try:
                                         st.image(chart_path, caption=chart_file.replace('.png', '').replace('_', ' ').title())
-                                    except:
-                                        pass
+                                    except Exception as e:
+                                        st.error(f"Erro ao carregar gráfico {chart_file}: {e}")
 
                 else:
                     st.error("❌ Resposta vazia ou inválida")
